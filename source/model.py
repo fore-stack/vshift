@@ -2,6 +2,8 @@
 # Functional for easy-use and quick prototypinh
 import numpy, scipy, pyworld, pysptk, sklearn.mixture, utilities.math, os, dotenv
 
+import pysptk.synthesis
+
 import scipy.io.wavfile
 
 from fastdtw import fastdtw
@@ -12,6 +14,8 @@ dotenv.load_dotenv()
 # Can be set from the environment (.env)
 # configuration file
 default_sampling_rate = int( os.getenv('sampling_rate') )
+
+default_fft_length =  pyworld.get_cheaptrick_fft_size(default_sampling_rate)
 
 default_alpha = pysptk.util.mcepalpha(default_sampling_rate)
 
@@ -61,7 +65,7 @@ def extract_features(audio_data, sampling_rate=default_sampling_rate):
 
     spectrogram = utilities.math.trim_zeros_frames(spectrogram)
 
-    mel_spectrum = pysptk.sp2mc(spectrogram, default_order, default_alpha)
+    mel_spectrum = pysptk.sp2mc(spectrogram, order=default_order, alpha=default_alpha)
 
     return mel_spectrum
 
@@ -71,9 +75,7 @@ def extract_features(audio_data, sampling_rate=default_sampling_rate):
 # returns (numpy_array) features
 def pad_features(features, pad_length=default_padded_length):
 
-    padding = numpy.zeros( (pad_length - features.shape[0], features.shape[1]) )
-
-    return numpy.concatenate( (features, padding) )
+    return numpy.pad(features, [(0, pad_length - len(features) ), (0, 0)], mode="constant", constant_values=0)
 
 # @Feature Alignment
 # accepts (numpy_array) features one two, and optional (function: int, int) distance, and (int) radius
@@ -91,6 +93,16 @@ def align(feature1, feature2, distance=utilities.math.melcd, radius=1):
     path_y = list( map(lambda l: l[1], path) )
     
     feature1, feature2 = feature1[path_x], feature2[path_y]
+
+    max_length = max( len(feature1), len(feature2) )
+
+    if max_length > feature1.shape[0] or max_length > feature2.shape[0]:
+
+            pad_size = max(max_length - feature1.shape[0], max_length > feature2.shape[0])
+
+            feature1 = numpy.pad( feature1, [(0, pad_size), (0, 0)], mode="constant", constant_values=0)
+
+            feature2 = numpy.pad( feature2, [(0, pad_size), (0, 0)], mode="constant", constant_values=0)
 
     return feature1, feature2
 
@@ -116,3 +128,36 @@ def create_model(max_iterations=default_max_iterations):
     model = sklearn.mixture.GaussianMixture(n_components=64, covariance_type='full', max_iter=max_iterations)
 
     return model
+
+# @
+#
+#
+def gaussian_voice_conversion(model, audio_data, sampling_rate, alpha=default_alpha, frame_period=default_frame_period, order=default_order, windows=default_windows,):
+
+    paramgen = utilities.math.MLPG(model, windows=windows, diff=True)
+    
+    fundamental_frequency, time_axis = pyworld.dio(audio_data, sampling_rate, frame_period=frame_period)
+
+    fundamental_frequency = pyworld.stonemask(audio_data, fundamental_frequency, time_axis, sampling_rate)
+
+    spectrogram = pyworld.cheaptrick(audio_data, fundamental_frequency, time_axis, sampling_rate)
+
+    aperiodicity = pyworld.d4c(audio_data, fundamental_frequency, time_axis, sampling_rate)
+
+    mel_spectrum = pysptk.sp2mc(spectrogram, order=order, alpha=alpha)
+    
+    c0, mel_spectrum = mel_spectrum[:, 0], mel_spectrum[:, 1:]
+
+    mel_spectrum = apply_delta(mel_spectrum)
+
+    mel_spectrum = paramgen.transform(mel_spectrum)
+
+    mel_spectrum = numpy.hstack( (c0[:, None], mel_spectrum) )
+
+    mel_spectrum[:, 0] = 0
+
+    engine = pysptk.synthesis.Synthesizer(pysptk.synthesis.MLSADF(order=order, alpha=alpha), hopsize=default_hop_length)
+
+    mlsa_coefficients = pysptk.mc2b(mel_spectrum.astype(numpy.float64), alpha=alpha)
+    
+    return engine.synthesis(audio_data, mlsa_coefficients)

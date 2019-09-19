@@ -11,7 +11,7 @@ def extension(filepath, new_extension=None):
     path, current_extension = os.path.splitext(filepath)
 
     #
-    if new_extension:
+    if new_extension or isinstance(new_extension, str):
 
         return path + new_extension
 
