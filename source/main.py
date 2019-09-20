@@ -94,8 +94,9 @@ def cmu_arctic_training(source_name, target_name, data_range=default_cmu_max_ran
 
     source_dataset, target_dataset = numpy.asarray(source_dataset), numpy.asarray(target_dataset)
 
-    joint_distribution = utilities.math.trim_zeros_frames( model.get_joint_matrix(source_dataset, target_dataset) )
+    joint_distribution = utilities.math.remove_zeros_frames( model.get_joint_matrix(source_dataset, target_dataset) )
 
+    print(joint_distribution.shape)
     #
     click.secho('Training Gaussian Mixture Model ({}-{}) 📚'.format(source_name, target_name), fg='blue')
 
@@ -178,11 +179,9 @@ def convert(model_path, audio_path):
 
     loaded_model = joblib.load(model_path)
 
-    audio_data = model.load_audio(audio_path).astype(numpy.float64)
-
     click.secho('Converting Audio: {} 🔢'.format(audio_path), fg='blue')
     
-    converted = model.gaussian_voice_conversion(loaded_model, audio_data, default_sampling_rate)
+    converted = model.gaussian_voice_conversion(loaded_model, audio_path)
 
     start_name = utilities.filesystem.extension(os.path.basename(model_path), '')
 

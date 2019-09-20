@@ -23,7 +23,7 @@ default_order = int( os.getenv('order') )
 
 default_frame_period = int( os.getenv('frame_period') )
 
-default_hop_length = int(default_sampling_rate * 1e-2)
+default_hop_length = int(default_sampling_rate * (default_frame_period * 0.001))
 
 default_windows = [
     (0, 0, numpy.array([1.0]) ),
@@ -36,6 +36,8 @@ default_windows = [
 default_padded_length = int( os.getenv('padded_length') )
 
 default_max_iterations = int( os.getenv('max_iterations') )
+
+default_gaussian_components = int( os.getenv('gaussian_components') )
 
 # @Audio Loader
 # Loads audio file into the right format
@@ -123,19 +125,24 @@ def get_joint_matrix(feature1, feature2):
 # @
 #
 #
-def create_model(max_iterations=default_max_iterations):
+def create_model(n_components=default_gaussian_components, max_iterations=default_max_iterations):
 
-    model = sklearn.mixture.GaussianMixture(n_components=64, covariance_type='full', max_iter=max_iterations)
+    model = sklearn.mixture.GaussianMixture(n_components=n_components, covariance_type='full', max_iter=max_iterations)
 
     return model
 
 # @
 #
 #
-def gaussian_voice_conversion(model, audio_data, sampling_rate, alpha=default_alpha, frame_period=default_frame_period, order=default_order, windows=default_windows,):
+def gaussian_voice_conversion(model, audio_path, windows=default_windows, frame_period=default_frame_period, order=default_order, alpha=default_alpha, hop_length=default_hop_length):
 
     paramgen = utilities.math.MLPG(model, windows=windows, diff=True)
-    
+
+    sampling_rate, audio_data = scipy.io.wavfile.read(audio_path)
+
+    audio_data = audio_data.astype(numpy.float64)
+
+    #
     fundamental_frequency, time_axis = pyworld.dio(audio_data, sampling_rate, frame_period=frame_period)
 
     fundamental_frequency = pyworld.stonemask(audio_data, fundamental_frequency, time_axis, sampling_rate)
@@ -144,20 +151,25 @@ def gaussian_voice_conversion(model, audio_data, sampling_rate, alpha=default_al
 
     aperiodicity = pyworld.d4c(audio_data, fundamental_frequency, time_axis, sampling_rate)
 
-    mel_spectrum = pysptk.sp2mc(spectrogram, order=order, alpha=alpha)
+    #
+    mel_coefficients = pysptk.sp2mc(spectrogram, order=order, alpha=alpha)
+
+    c0, mel_coefficients = mel_coefficients[:, 0], mel_coefficients[:, 1:]
+
+    mel_coefficients = utilities.math.apply_delta(mel_coefficients, windows)
+
+    mel_coefficients = paramgen.transform(mel_coefficients)
+
+    mel_coefficients = numpy.hstack((c0[:, None], mel_coefficients))
+
+    #
+    mel_coefficients[:, 0] = 0
+
+    engine = pysptk.synthesis.Synthesizer(pysptk.synthesis.MLSADF(order=order, alpha=alpha), hopsize=hop_length)
     
-    c0, mel_spectrum = mel_spectrum[:, 0], mel_spectrum[:, 1:]
-
-    mel_spectrum = apply_delta(mel_spectrum)
-
-    mel_spectrum = paramgen.transform(mel_spectrum)
-
-    mel_spectrum = numpy.hstack( (c0[:, None], mel_spectrum) )
-
-    mel_spectrum[:, 0] = 0
-
-    engine = pysptk.synthesis.Synthesizer(pysptk.synthesis.MLSADF(order=order, alpha=alpha), hopsize=default_hop_length)
-
-    mlsa_coefficients = pysptk.mc2b(mel_spectrum.astype(numpy.float64), alpha=alpha)
+    mlsa_coefficients = pysptk.mc2b(mel_coefficients.astype(numpy.float64), alpha=alpha)
     
-    return engine.synthesis(audio_data, mlsa_coefficients)
+    waveform = engine.synthesis(audio_data, mlsa_coefficients)
+
+    #
+    return numpy.asarray(waveform, dtype=numpy.int16)
