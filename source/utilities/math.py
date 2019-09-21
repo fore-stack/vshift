@@ -238,58 +238,89 @@ def mlpg(mean_frames, variance_frames, windows):
 #
 #
 class MLPGBase(object):
+
     def __init__(self, gmm, swap=False, diff=False):
+
         # D: static + delta dim
         D = gmm.means_.shape[1] // 2
+
         self.num_mixtures = gmm.means_.shape[0]
+
         self.weights = gmm.weights_
 
         # Split source and target parameters from joint GMM
         self.src_means = gmm.means_[:, :D]
+
         self.tgt_means = gmm.means_[:, D:]
+
         self.covarXX = gmm.covariances_[:, :D, :D]
+
         self.covarXY = gmm.covariances_[:, :D, D:]
+
         self.covarYX = gmm.covariances_[:, D:, :D]
+
         self.covarYY = gmm.covariances_[:, D:, D:]
 
         if diff:
+
             self.tgt_means = self.tgt_means - self.src_means
+
             self.covarYY = self.covarXX + self.covarYY - self.covarXY - self.covarYX
+
             self.covarXY = self.covarXY - self.covarXX
+
             self.covarYX = self.covarXY.transpose(0, 2, 1)
 
         # swap src and target parameters
         if swap:
+
             self.tgt_means, self.src_means = self.src_means, self.tgt_means
+
             self.covarYY, self.covarXX = self.covarXX, self.covarYY
+
             self.covarYX, self.covarXY = self.covarXY, self.covarYX
 
         # p(x), which is used to compute posterior prob. for a given source
         # spectral feature in mapping stage.
         self.px = sklearn.mixture.GaussianMixture(n_components=self.num_mixtures, covariance_type="full")
+
         self.px.means_ = self.src_means
+
         self.px.covariances_ = self.covarXX
+
         self.px.weights_ = self.weights
-        self.px.precisions_cholesky_ = _compute_precision_cholesky(
-            self.px.covariances_, "full")
+
+        self.px.precisions_cholesky_ = _compute_precision_cholesky(self.px.covariances_, "full")
 
     def transform(self, src):
+
         if src.ndim == 2:
+
             tgt = numpy.zeros_like(src)
+
             for idx, x in enumerate(src):
+
                 y = self._transform_frame(x)
+
                 tgt[idx][:len(y)] = y
+
             return tgt
+
         else:
+            
             return self._transform_frame(src)
 
     def _transform_frame(self, src):
+
         D = len(src)
 
         # Eq.(11)
         E = numpy.zeros((self.num_mixtures, D))
+
         for m in range(self.num_mixtures):
+
             xx = numpy.linalg.solve(self.covarXX[m], src - self.src_means[m])
+
             E[m] = self.tgt_means[m] + self.covarYX[m].dot(xx)
 
         # Eq.(9) p(m|x)
@@ -302,19 +333,28 @@ class MLPGBase(object):
 class MLPG(MLPGBase):
 
     def __init__(self, gmm, windows=None, swap=False, diff=False):
+
         super(MLPG, self).__init__(gmm, swap, diff)
+        
         if windows is None:
             windows = [
-                (0, 0, numpy.array([1.0])),
-                (1, 1, numpy.array([-0.5, 0.0, 0.5])),
+                
+                (0, 0, numpy.array([1.0]) ),
+
+                (1, 1, numpy.array([-0.5, 0.0, 0.5]) ),
+
             ]
+
         self.windows = windows
+
         self.static_dim = gmm.means_.shape[-1] // 2 // len(windows)
 
     def transform(self, src):
+
         T, feature_dim = src.shape[0], src.shape[1]
 
         if feature_dim == self.static_dim:
+
             return super(MLPG, self).transform(src)
 
         # A suboptimum mixture sequence  (eq.37)
@@ -322,9 +362,13 @@ class MLPG(MLPGBase):
 
         # Compute E eq.(40)
         E = numpy.empty((T, feature_dim))
+
         for t in range(T):
+
             m = optimum_mix[t]  # estimated mixture index at time t
+
             xx = numpy.linalg.solve(self.covarXX[m], src[t] - self.src_means[m])
+            
             # Eq. (22)
             E[t] = self.tgt_means[m] + numpy.dot(self.covarYX[m], xx)
 
@@ -332,8 +376,11 @@ class MLPG(MLPGBase):
         # Approximated variances with diagonals so that we can do MLPG
         # efficiently in dimention-wise manner
         D = numpy.empty((T, feature_dim))
+
         for t in range(T):
+
             m = optimum_mix[t]
+            
             # Eq. (23), with approximating covariances as diagonals
             D[t] = numpy.diag(self.covarYY[m]) - numpy.diag(self.covarYX[m]) / numpy.diag(self.covarXX[m]) * numpy.diag(self.covarXY[m])
 

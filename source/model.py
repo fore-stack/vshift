@@ -108,32 +108,32 @@ def align(feature1, feature2, distance=utilities.math.melcd, radius=1):
 
     return feature1, feature2
 
-# @
-#
-#
+# @Delta Features
+# accepts (numpy_array) features and (list) windows
+# returns (numpy_array) delta features
 def apply_delta(features, windows=default_windows):
     
     return utilities.math.apply_delta(features, windows)
 
-# @
-#
-#
+# @Joint Matrix
+# accepts (numpy_array) feature one and (numpy_array) feature two
+# returns (numpy_array) joint
 def get_joint_matrix(feature1, feature2):
 
     return numpy.concatenate( (feature1, feature2) , axis=-1).reshape(-1, feature1.shape[-1] * 2)
 
-# @
-#
-#
+# @Gaussian Mixture Model Generation
+# accepts optional (int) n-components and (int) max iterations
+# returns gaussian mixture model
 def create_model(n_components=default_gaussian_components, max_iterations=default_max_iterations):
 
     model = sklearn.mixture.GaussianMixture(n_components=n_components, covariance_type='full', max_iter=max_iterations)
 
     return model
 
-# @
-#
-#
+# @Voice Conversion
+# accepts gaussian mixture model, (string) audio path and optional windows, (int) frame period, (int) order, (float) alpha, (int) hop length
+# returns (numpy_array) waveform
 def gaussian_voice_conversion(model, audio_path, windows=default_windows, frame_period=default_frame_period, order=default_order, alpha=default_alpha, hop_length=default_hop_length):
 
     paramgen = utilities.math.MLPG(model, windows=windows, diff=True)
@@ -171,5 +171,6 @@ def gaussian_voice_conversion(model, audio_path, windows=default_windows, frame_
     
     waveform = engine.synthesis(audio_data, mlsa_coefficients)
 
-    #
+    # The numpy.int16 is really important, otherwise it would
+    # produce non-sensical wavefiles when saved with scipy
     return numpy.asarray(waveform, dtype=numpy.int16)

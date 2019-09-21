@@ -43,6 +43,8 @@ def interface(analyze=True, convert=True, prompt=False, benchmark=False):
 
             original = click.prompt('Enter audio path 🎧 ', type=str)
 
+            main.convert(matrices, original)
+
         else:
 
             click.secho('Error: Invalid Mode ✘', fg='red')
