@@ -1,0 +1,37 @@
+a, code, .subtitle, .navbar-brand { 
+    font-family: "Source Code Pro" !important; 
+}
+
+code {
+    color: #3273dc !important;
+}
+
+.section {
+    padding-top: 10px !important;
+}
+
+.title, .article, .content { 
+    font-family: Roboto;
+}
+
+.termynal { 
+    height: 400px; 
+    margin: 0px auto; 
+    box-shadow: 5px 7px 20px rgba(160, 160, 160, 0.75); 
+}
+
+.navbar .navbar-brand { 
+    justify-content: center; 
+    align-items: center; 
+}
+
+.navbar-brand { width: 100%; }
+
+@media only screen and (min-width: 769px) {
+
+    .termynal { 
+        height: 400px; 
+        font-size: 18px !important; 
+    }
+
+}

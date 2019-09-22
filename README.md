@@ -18,3 +18,4 @@ To use the system, install dependencies with `pipenv install`, after that activa
 - [ ] Support for various audio file formats
 - [ ] Audio resampling and stereo-to-mono
 - [ ] Streaming audio input and output live
+- [ ] Silhouette score implementation

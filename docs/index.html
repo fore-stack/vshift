@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head class="has-navbar-fixed-top">
+        <!-- @Metadata -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="author" content="Ralph Louis Gopez">
+        <meta name="description" content="High-Quality Real-Time Voice Conversion System">
+        <meta name="keywords" content="ralph,louis,gopez,portfolio,developer,voice, conversion, voice conversion, python">
+
+        <!-- @Open Graph Metadata -->
+        <meta property="og:title" content="VoiceShift">
+        <meta property="og:description" content="High-Quality Real-Time Voice Conversion System">
+        <meta property="og:type" content="website" />
+
+        <!-- @Twitter Metadata -->
+        <meta name="twitter:site" content="@ralphlouisgopez">
+        <meta name="twitter:creator" content="@ralphlouisgopez">
+        <meta name="twitter:title" content="VoiceShift">
+        <meta name="twitter:description" content="High-Quality Real-Time Voice Conversion System">
+
+        <!-- @CSS Dependencies-->
+        <title>VoiceShift</title>
+        <link rel="stylesheet" href="css/fonts.css">
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="libraries/css/bulma.min.css">
+        <link rel="stylesheet" href="libraries/css/termynal.css">
+    </head>
+    <body id="home">
+        <!-- @Navigation -->
+        <nav class="navbar">
+            <div class="navbar-brand has-text-centered">
+                <a data-scroll href="#home" class="navbar-item">home</a>
+                <a data-scroll href="#installation" class="navbar-item">installation</a>
+                <a data-scroll href="#usage" class="navbar-item">usage</a>
+            </div>
+        </nav>
+
+        <!-- @Title -->
+        <div class="hero">
+            <div class="hero-body">
+                <div class="container has-text-centered">
+                    <h1 class="title">VoiceShift</h1>
+                    <h2 class="subtitle">high-quality real-time voice conversion system</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- @Terminal -->
+        <div class="section">
+            <div class="container">
+                <div class="termynal"></div>
+            </div>
+        </div>  
+
+        <!-- @Installation -->
+        <div class="section" id="installation">
+            <div class="container"><h1 class="is-size-3 has-text-black-ter article">Installation</h1>
+                <p class="article has-text-justified">
+                    Install <a href="https://www.python.org/" target="_blank">Python 3.6</a> and <a href="https://github.com/pypa/pipenv" target="_blank">Pipenv</a> on your machine
+                    then download the voice conversion system on <a href="https://github.com/ralphlouisgopez/vshift/archive/master.zip">Github</a>. The project has dependencies that 
+                    need to be installed.
+                    <div class="content">
+                        <ol type="1">
+                            <li>Run <code>pipenv install</code> on root directory of the project.</li>
+                            <li>Enter the source directory of the project with <code>cd source</code>.</li>
+                            <li>Use <code>python cli.py --help</code> to show command-line interface details.</li>
+                        </ol>
+                    </div>
+                </p>
+            </div>
+        </div>  
+
+        <!-- @Usage -->
+        <div class="section" id="usage">
+            <div class="container">
+                <h1 class="is-size-3 has-text-black-ter article">Usage</h1>
+                <p class="article has-text-justified">
+                    Currently, the system only supports <a href="https://en.wikipedia.org/wiki/WAV" target="_blank">WAV</a> format.
+                    Hyperparameters and directories can be set inside the <code>.env</code> file found on source directory and the 
+                    sampling rate inside must also match the sampling rate of the audio files. The next updates would address these 
+                    issues and might also provide a friendly graphical user interface.
+                </p>
+            </div>
+        </div>
+
+        <!-- @Script Dependencies -->
+        <script src="libraries/js/smooth-scroll.polyfills.min.js"></script>
+        <script src="libraries/js/smooth-scroll.min.js"></script>
+        <script src="libraries/js/termynal.js"></script>
+        <script src="js/index.js"></script>
+    </body>
+</html>

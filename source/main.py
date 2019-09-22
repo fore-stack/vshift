@@ -145,6 +145,38 @@ def analyze(source_path, target_path):
 
     click.secho('Loading Audio Files: {} {} 🔍 '.format(source_path, target_path), fg='blue')
 
+    # Iterative Strategy
+
+    source_dataset, target_dataset = [], []
+
+    source_data, target_data = model.extract_features( model.load_audio(source_path) ), model.extract_features(model.load_audio(target_path))
+
+    shorter = min([ source_data.shape[0], target_data.shape[0] ])
+
+    pad_length = max([ source_data.shape[0], target_data.shape[0] ]) + 200
+
+    for index in tqdm( range( int(shorter/default_padded_length) ) ):
+
+        current_source_data = source_data[index * default_padded_length:index * default_padded_length + default_padded_length, :]
+
+        current_target_data = target_data[index * default_padded_length:index * default_padded_length + default_padded_length, :]
+
+        current_source_data, current_target_data = model.align(current_source_data, current_target_data)
+
+        current_source_data, current_target_data = model.pad_features(current_source_data, pad_length=pad_length), model.pad_features(current_target_data, pad_length=pad_length)
+
+        current_source_data, current_target_data = current_source_data[:, 1:], current_target_data[:, 1:]
+
+        current_source_data, current_target_data = model.apply_delta(current_source_data), model.apply_delta(current_target_data)
+
+        source_dataset.append(current_source_data), target_dataset.append(current_target_data)
+
+    source_dataset, target_dataset = numpy.asarray(source_dataset), numpy.asarray(target_dataset)
+
+    joint_distribution = utilities.math.remove_zeros_frames( model.get_joint_matrix(source_dataset, target_dataset) )
+    
+    # Convolution Strategy
+
     # source_dataset, target_dataset = [], []
 
     # source_data, target_data = model.extract_features( model.load_audio(source_path) ), model.extract_features(model.load_audio(target_path))
@@ -173,19 +205,21 @@ def analyze(source_path, target_path):
 
     # joint_distribution = utilities.math.remove_zeros_frames( model.get_joint_matrix(source_dataset, target_dataset) )
 
-    source_data = model.load_audio(source_path)
+    # Single Process Strategy
 
-    target_data = model.load_audio(target_path)
+    # source_data = model.load_audio(source_path)
 
-    padded_length = max([ source_data.shape[0], target_data.shape[0] ]) + default_auto_pad_length
+    # target_data = model.load_audio(target_path)
 
-    source_data, target_data = generic_data_pipeline(source_data, target_data, padded_length)
+    # padded_length = max([ source_data.shape[0], target_data.shape[0] ]) + default_auto_pad_length
 
-    joint_distribution = utilities.math.remove_zeros_frames( model.get_joint_matrix(source_data, target_data) )
+    # source_data, target_data = generic_data_pipeline(source_data, target_data, padded_length)
+
+    # joint_distribution = utilities.math.remove_zeros_frames( model.get_joint_matrix(source_data, target_data) )
 
     gaussian_mixture_model = model.create_model()
 
-    click.secho('Training Gaussian Mixture Model 🎓 '.format(source_path, target_path), fg='blue')
+    click.secho('Training Gaussian Mixture Model 🎓 ', fg='blue')
 
     gaussian_mixture_model.fit(joint_distribution)
 
